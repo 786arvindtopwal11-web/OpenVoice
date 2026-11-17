@@ -1,0 +1,41 @@
+name: "YouTube: naye comments laao"
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"   # har 3 ghante (UTC)
+  workflow_dispatch:          # Actions tab se "Run workflow" button
+
+concurrency:
+  group: yt-fetch-comments
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: youtube-comment-bot/requirements.txt
+
+      - run: pip install -r youtube-comment-bot/requirements.txt
+
+      - name: Fetch comments and draft replies
+        working-directory: youtube-comment-bot
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LOOKBACK_DAYS: "3"
+          MAX_DRAFTS_PER_RUN: "15"
+        run: python fetch_and_draft.py
